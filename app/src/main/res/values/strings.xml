@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Wi-Fi toggle tile</string>
+    <string name="tile_wifi">Wi-Fi toggle</string>
+
+    <string name="wifi">Wi-Fi</string>
+    <string name="wifi_state_on">On</string>
+    <string name="wifi_state_off">Off</string>
+    <string name="wifi_state_turning_on">Turning on…</string>
+    <string name="wifi_state_turning_off">Turning off…</string>
+    <string name="content_description_turn_wifi_on">Turn Wi-Fi on</string>
+    <string name="content_description_turn_wifi_off">Turn Wi-Fi off</string>
+
+    <string name="setup_instructions">1. From the top of your screen, swipe down twice\n2. At the bottom left, tap Edit\n3. Touch and hold the setting, then drag the setting to where you want it</string>
+
+</resources>

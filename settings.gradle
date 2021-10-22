@@ -1,0 +1,2 @@
+rootProject.name = "wifi-toggle-tile"
+include ':app'
