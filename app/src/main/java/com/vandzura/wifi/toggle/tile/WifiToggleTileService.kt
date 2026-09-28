@@ -27,9 +27,13 @@ class WifiToggleTileService : TileService() {
         debugLog("onStartListening")
 
         invalidateTile()
-        //listen to wifi changes
+        //listen to wifi changes and rssi signal changes
         wifiStateReceiver = WifiStateReceiver().also {
-            registerReceiver(it, IntentFilter(WifiManager.WIFI_STATE_CHANGED_ACTION))
+            val filter = IntentFilter().apply {
+                addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
+                addAction(WifiManager.RSSI_CHANGED_ACTION)
+            }
+            registerReceiver(it, filter)
         }
     }
 
@@ -56,7 +60,10 @@ class WifiToggleTileService : TileService() {
         invalidateTile()
     }
 
-    private fun invalidateTile(wifiState: Int = NetworkUtils.wifiState(this)) {
+    private fun invalidateTile(
+        wifiState: Int = NetworkUtils.wifiState(this),
+        wifiSSID: String? = NetworkUtils.wifiSSID(this)
+    ) {
         qsTile.run {
             if (WifiManager.WIFI_STATE_ENABLING == wifiState ||
                 WifiManager.WIFI_STATE_ENABLED == wifiState
@@ -71,28 +78,39 @@ class WifiToggleTileService : TileService() {
 
         val iconRes: Int
         val subtitleRes: Int
+        var subtitleMetadata: String? = null
 
         when (wifiState) {
             WifiManager.WIFI_STATE_ENABLING -> {
                 debugLog("invalidateTile - enabling")
                 iconRes = R.drawable.ic_wifi_on
                 subtitleRes = R.string.wifi_state_turning_on
+                subtitleMetadata = wifiSSID
             }
+
             WifiManager.WIFI_STATE_ENABLED -> {
                 debugLog("invalidateTile - enabled")
-                iconRes = R.drawable.ic_wifi_on
+                iconRes = when (NetworkUtils.wifiSignalLevel(this, 3)) {
+                    2 -> R.drawable.wifi_signal_3
+                    1 -> R.drawable.wifi_signal_2
+                    else -> R.drawable.wifi_signal_1
+                }
                 subtitleRes = R.string.wifi_state_on
+                subtitleMetadata = wifiSSID
             }
+
             WifiManager.WIFI_STATE_DISABLING -> {
                 debugLog("invalidateTile - disabling")
                 iconRes = R.drawable.ic_wifi_off
                 subtitleRes = R.string.wifi_state_turning_off
             }
+
             WifiManager.WIFI_STATE_DISABLED -> {
                 debugLog("invalidateTile - disabled")
                 iconRes = R.drawable.ic_wifi_off
                 subtitleRes = R.string.wifi_state_off
             }
+
             else -> {
                 debugLog("invalidateTile - unknown")
                 iconRes = R.drawable.ic_wifi_off
@@ -102,7 +120,16 @@ class WifiToggleTileService : TileService() {
 
         val icon = Icon.createWithResource(this, iconRes)
         val title = resources.getString(R.string.wifi)
-        val subtitle = if (subtitleRes != -1) resources.getString(subtitleRes) else ""
+        val subtitle = if (subtitleRes != -1) {
+            var subtitleText = resources.getString(subtitleRes)
+            if (!subtitleMetadata.isNullOrBlank()) {
+                "$subtitleText • $subtitleMetadata"
+            } else {
+                subtitleText
+            }
+        } else {
+            ""
+        }
 
         qsTile.icon = icon
         if (Build.VERSION.SDK_INT >= 29) {
@@ -119,10 +146,18 @@ class WifiToggleTileService : TileService() {
 
         override fun onReceive(context: Context?, intent: Intent?) {
             if (intent != null) {
-                val wifiState =
-                    intent.getIntExtra(WifiManager.EXTRA_WIFI_STATE, WifiManager.WIFI_STATE_UNKNOWN)
-                debugLog("WifiStateReceiver - wifi state changed")
-                invalidateTile(wifiState)
+                if (intent.action == WifiManager.RSSI_CHANGED_ACTION) {
+                    debugLog("WifiStateReceiver - RSSI changed")
+                    invalidateTile()
+                } else {
+                    val wifiState =
+                        intent.getIntExtra(
+                            WifiManager.EXTRA_WIFI_STATE,
+                            WifiManager.WIFI_STATE_UNKNOWN
+                        )
+                    debugLog("WifiStateReceiver - wifi state changed")
+                    invalidateTile(wifiState)
+                }
             }
         }
     }
